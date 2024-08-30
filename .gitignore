@@ -1,0 +1,17 @@
+**/target/
+**/*.rs.bk
+*.pdb
+
+.DS_Store
+
+**/*.rs.orig
+.env
+*.log
+
+.rustover/
+
+build/
+
+config.local.toml
+*.tmp
+*.temp
