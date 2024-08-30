@@ -1,0 +1,33 @@
+name: Deploy core services
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "crates/core/**"
+      - "crates/data_dust/**"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "crates/core/**"
+      - "crates/data_dust/**"
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: "mv docker/core/Dockerfile ."
+
+      - name: docker login
+        env:
+          DOCKER_USER: ${{secrets.DOCKERHUB_USERNAME}}
+          DOCKER_PASSWORD: ${{secrets.DOCKERHUB_TOKEN}}
+        run: |
+          docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+      - name: Build the Docker image
+        run: docker build . --tag shawakash/talgo_core:${{ github.sha }}
+
+      - name: Docker Push
+        run: docker push shawakash/talgo_core:${{ github.sha }}
