@@ -61,15 +61,15 @@ diesel::table! {
         #[max_length = 50]
         language -> Varchar,
         code -> Text,
-        status -> Int2,
-        execution_time_ms -> Int4,
-        memory_used_kb -> Int4,
-        submitted_at -> Timestamp,
         verdict -> Nullable<Text>,
         score -> Nullable<Float4>,
         test_cases_passed -> Nullable<Int4>,
         total_test_cases -> Nullable<Int4>,
         contest_id -> Int4,
+        status -> Nullable<Int2>,
+        execution_time_ms -> Nullable<Int4>,
+        memory_used_kb -> Nullable<Int4>,
+        submitted_at -> Nullable<Timestamp>,
     }
 }
 
@@ -122,12 +122,6 @@ diesel::table! {
         bio -> Nullable<Varchar>,
     }
 }
-
-diesel::joinable!(contests -> users (created_by));
-diesel::joinable!(problems -> contests (contest_id));
-diesel::joinable!(problems -> users (author_id));
-diesel::joinable!(submissions -> problems (problem_id));
-diesel::joinable!(submissions -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     contests,

@@ -69,7 +69,6 @@ pub struct Submissions {
     pub id: i64,
     pub user_id: Uuid,
     pub problem_id: i32,
-    pub contest_id: Option<i32>,
     pub language: String,
     pub code: String,
     pub status: i16,
@@ -80,6 +79,7 @@ pub struct Submissions {
     pub score: Option<f32>,
     pub test_cases_passed: Option<i32>,
     pub total_test_cases: Option<i32>,
+    pub contest_id: i32,
 }
 
 #[derive(Queryable, Insertable, Serialize, QueryId, Debug, Selectable, Deserialize, Clone)]
