@@ -1,0 +1,12 @@
+[package]
+name = "oxide_wave"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+data_dust = { path = "../data_dust" }
+tokio = { version = "1", features = ["full"] }
+tokio-tungstenite = "0.18"
+futures-util = "0.3"
+redis = { version = "0.26.1", features = ["tokio-comp"] }
+serde_json = "1.0.127"
