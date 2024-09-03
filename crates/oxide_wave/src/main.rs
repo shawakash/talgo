@@ -61,22 +61,45 @@ async fn handle_connection(stream: TcpStream, client: redis::Client) {
         if msg.is_text() || msg.is_binary() {
             let msg = msg.to_text().expect("Error converting message to text");
 
-        //     match serde_json::from_str::<SubMsg>(msg) {
-        //         Ok(msg) => match msg.message_type.as_str() {
+            match serde_json::from_str::<SubMsg>(msg) {
+                Ok(msg) => match msg.message_type.as_str() {
+                    "unsubscribe" => {
+                        let mut subs = subscriptions.lock().await;
+                        if let Some(tx) = subs.remove(&msg.channel) {
+                            tx.send(true).expect("Failed to send unsubscribe signal");
+                        }
 
-        //         Err(e) => {
-        //             println!("Error parsing JSON: {}", e);
-        //             let error_msg =
-        //                 create_msg("error", "system", Some(&format!("Invalid JSON: {}", e)));
-        //             ws_sender
-        //                 .lock()
-        //                 .await
-        //                 .send(Message::Text(error_msg))
-        //                 .await
-        //                 .expect("Error sending error message");
-        //         }
-        //     }
-        // }
+                        let res = create_msg("unsubscribed", &msg.channel, Some("Queued"));
+                        ws_sender
+                            .lock()
+                            .await
+                            .send(Message::Text(res))
+                            .await
+                            .expect("Error sending message");
+                    }
+                    _ => {
+                        let res = create_msg("error", &msg.channel, Some("Invalid message type"));
+                        ws_sender
+                            .lock()
+                            .await
+                            .send(Message::Text(res))
+                            .await
+                            .expect("Error sending message");
+                    }
+                },
+                Err(e) => {
+                    println!("Error parsing JSON: {}", e);
+                    let error_msg =
+                        create_msg("error", "system", Some(&format!("Invalid JSON: {}", e)));
+                    ws_sender
+                        .lock()
+                        .await
+                        .send(Message::Text(error_msg))
+                        .await
+                        .expect("Error sending error message");
+                }
+            }
+        }
     }
     println!("WebSocket connection closed: {}", addr);
 }
