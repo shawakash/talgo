@@ -1,0 +1,33 @@
+name: Deploy oxide_wave services
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "crates/oxide_wave/**"
+      - "crates/data_dust/**"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "crates/oxide_wave/**"
+      - "crates/data_dust/**"
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: "mv docker/oxide_wave/Dockerfile ."
+
+      - name: docker login
+        env:
+          DOCKER_USER: ${{secrets.DOCKERHUB_USERNAME}}
+          DOCKER_PASSWORD: ${{secrets.DOCKERHUB_TOKEN}}
+        run: |
+          docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+      - name: Build the Docker image
+        run: docker build . --tag shawakash/talgo_oxide_wave:${{ github.sha }}
+
+      - name: Docker Push
+        run: docker push shawakash/talgo_oxide_wave:${{ github.sha }}
