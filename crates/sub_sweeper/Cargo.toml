@@ -1,0 +1,15 @@
+[package]
+name = "sub_sweeper"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+data_dust = { path = "../data_dust" }
+diesel = "2.2.4"
+dotenvy = "0.15.7"
+futures = "0.3.30"
+rdkafka = "0.36.2"
+serde = "1.0.210"
+serde_json = "1.0.128"
+tokio = "1.40.0"
+tokio-postgres = "0.7.11"
