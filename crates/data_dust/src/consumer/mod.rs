@@ -54,35 +54,40 @@ impl KafkaConsumer {
         })
     }
 
-    // pub async fn consume<T: DeserializeOwned + Send + 'static>(
-    //     &self,
-    //     max_messages: usize,
-    //     timeout: Duration,
-    // ) -> Result<Vec<(T, i32, i64)>, ConsumerError> {
-    //     let mut messages = Vec::new();
-    //     let mut message_stream = self.consumer.stream();
+    pub async fn consume<T: DeserializeOwned + Send + 'static>(
+        &self,
+        max_messages: usize,
+        timeout: Duration,
+    ) -> Result<Vec<(T, i32, i64)>, ConsumerError> {
+        let mut messages = Vec::new();
+        let mut message_stream = self.consumer.stream();
 
-    //     while messages.len() < max_messages {
-    //         match tokio::time::timeout(timeout, message_stream.next()).await {
-    //             Ok(Some(message)) => {
-    //                 let borrowed_message = message?;
-    //                 let payload = borrowed_message.payload().ok_or_else(|| {
-    //                     ConsumerError::Kafka(KafkaError::MessageConsumption(
-    //                         rdkafka::error::RDKafkaErrorCode::UnknownTopicOrPart,
-    //                     ))
-    //                 })?;
-    //                 let deserialized_payload: T = serde_json::from_slice(payload)?;
-    //                 let partition = borrowed_message.partition();
-    //                 let offset = borrowed_message.offset();
-    //                 messages.push((deserialized_payload, partition, offset));
-    //             }
-    //             Ok(None) => break,
-    //             Err(_) => break,
-    //         }
-    //     }
+        let deadline = tokio::time::Instant::now() + timeout;
 
-    //     Ok(messages)
-    // }
+        while messages.len() < max_messages {
+            match tokio::time::timeout_at(deadline, message_stream.next()).await {
+                Ok(Some(message_result)) => match message_result {
+                    Ok(borrowed_message) => {
+                        if let Some(payload) = borrowed_message.payload() {
+                            match serde_json::from_slice::<T>(payload) {
+                                Ok(deserialized_payload) => {
+                                    let partition = borrowed_message.partition();
+                                    let offset = borrowed_message.offset();
+                                    messages.push((deserialized_payload, partition, offset));
+                                }
+                                Err(e) => return Err(ConsumerError::Deserialization(e)),
+                            }
+                        }
+                    }
+                    Err(e) => return Err(ConsumerError::Kafka(e)),
+                },
+                Ok(None) => break,
+                Err(_) => break, // Timeout reached
+            }
+        }
+
+        Ok(messages)
+    }
 
     pub async fn acknowledge(&self, partition: i32, offset: i64) -> Result<(), ConsumerError> {
         let mut tpl = TopicPartitionList::new();

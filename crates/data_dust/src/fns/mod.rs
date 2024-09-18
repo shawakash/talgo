@@ -1,6 +1,7 @@
 use diesel::pg::PgConnection;
 use diesel::{prelude::*, r2d2};
 
+pub mod problems;
 pub mod submit;
 use std::env;
 
