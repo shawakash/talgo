@@ -1,4 +1,4 @@
-use diesel::{prelude::*};
+use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -9,5 +9,5 @@ pub struct NewSubmission {
     pub problem_id: i32,
     pub language: String,
     pub code: String,
-    pub contest_id: i32
+    pub contest_id: i32,
 }

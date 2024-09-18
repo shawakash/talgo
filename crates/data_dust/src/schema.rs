@@ -42,7 +42,7 @@ diesel::table! {
         sample_input -> Text,
         sample_output -> Text,
         author_id -> Uuid,
-        contest_id -> Nullable<Int4>,
+        contest_id -> Int4,
         created_at -> Timestamp,
         updated_at -> Timestamp,
         is_public -> Bool,

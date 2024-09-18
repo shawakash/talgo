@@ -4,7 +4,8 @@ use diesel::{prelude::*, query_builder::QueryId};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::enums::UserRanks;
+use crate::enums::sub::SubmissionVerdict;
+use crate::enums::user::UserRanks;
 use crate::schema::{contests, problems, submissions, users};
 
 #[derive(Queryable, Insertable, Serialize, QueryId, Debug, Selectable, Deserialize, Clone)]
@@ -53,7 +54,7 @@ pub struct Problems {
     pub sample_output: String,
     pub notes: Option<String>,
     pub author_id: Uuid,
-    pub contest_id: Option<i32>,
+    pub contest_id: i32,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
     pub is_public: bool,
@@ -75,7 +76,7 @@ pub struct Submissions {
     pub execution_time_ms: i32,
     pub memory_used_kb: i32,
     pub submitted_at: NaiveDateTime,
-    pub verdict: Option<String>,
+    pub verdict: Option<SubmissionVerdict>,
     pub score: Option<f32>,
     pub test_cases_passed: Option<i32>,
     pub total_test_cases: Option<i32>,
