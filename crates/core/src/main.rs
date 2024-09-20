@@ -3,6 +3,7 @@ use std::io::Error;
 use actix_web::{middleware::Logger, web, App, HttpResponse, HttpServer};
 use dotenv::dotenv;
 use env_logger::Env;
+use routes::user::user_config;
 use serde_json::json;
 
 pub mod routes;
@@ -32,6 +33,7 @@ async fn main() -> Result<(), Error> {
             .app_data(app_state.clone())
             .wrap(Logger::default())
             .configure(|cfg| contest_config(cfg, &app_state))
+            .configure(|cfg| user_config(cfg, &app_state))
             .route("/", web::get().to(root))
     })
     .bind(("127.0.0.1", 8080))?
