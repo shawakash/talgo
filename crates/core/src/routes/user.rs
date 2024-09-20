@@ -9,11 +9,75 @@ use data_dust::fns::user::{encrypt_token, get_user_id_by_username_email, verify_
 use uuid::Uuid;
 
 async fn login(app_state: web::Data<AppState>, login_req: web::Json<LoginReq>) -> impl Responder {
-    HttpResponse::Ok().json(LoginRes {
-        success: true,
-        message: "Login successful".to_string(),
-        user_id: None,
+    let mut conn = app_state.db_pool.get().unwrap();
+
+    let login_result = web::block(move || {
+        if let Ok((user_id, hash)) =
+            get_user_id_by_username_email(&mut conn, &login_req.username_or_email)
+        {
+            if verify_password(&login_req.password, &hash).unwrap() {
+                LoginRes {
+                    success: true,
+                    message: "Logged in!".to_string(),
+                    user_id: Some(user_id.to_string()),
+                }
+            } else {
+                LoginRes {
+                    success: false,
+                    message: "Password Mismatch".to_string(),
+                    user_id: None,
+                }
+            }
+        } else {
+            LoginRes {
+                success: false,
+                message: "No such user".to_string(),
+                user_id: None,
+            }
+        }
     })
+    .await
+    .unwrap();
+
+    let mut response = HttpResponse::Ok().json(&login_result);
+
+    if login_result.success {
+        if let Some(user_id) = &login_result.user_id {
+            let session_id = Uuid::new_v4().to_string();
+            let expiration = Utc::now() + Duration::hours(24);
+
+            let session_token = format!("{}:{}:{}", user_id, session_id, expiration.timestamp());
+            match encrypt_token(&session_token) {
+                Ok(encrypted_token) => {
+                    let cookie_expiration =
+                        OffsetDateTime::from_unix_timestamp(expiration.timestamp()).unwrap();
+
+                    let cookie = Cookie::build("session", encrypted_token)
+                        .path("/")
+                        .secure(true)
+                        .http_only(true)
+                        .same_site(SameSite::Strict)
+                        .expires(cookie_expiration)
+                        .max_age(actix_web::cookie::time::Duration::hours(24))
+                        .finish();
+
+                    response.add_cookie(&cookie).unwrap();
+
+                    // Store session info in cache
+                    // store_session(user_id, session_id, expiration).await;
+                }
+                Err(_) => {
+                    response = HttpResponse::InternalServerError().json(LoginRes {
+                        success: false,
+                        message: "Session creation failed".to_string(),
+                        user_id: None,
+                    });
+                }
+            }
+        }
+    }
+
+    response
 }
 
 async fn signup(app_state: web::Data<AppState>) -> impl Responder {
