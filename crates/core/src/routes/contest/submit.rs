@@ -1,14 +1,17 @@
-use actix_web::{web, HttpResponse, Result, error::ErrorInternalServerError};
-use data_dust::types::submit::NewSubmission;
+use actix_web::{error::ErrorInternalServerError, web, HttpResponse, Result};
 use data_dust::fns::submit::insert_submit;
+use data_dust::types::submit::NewSubmission;
 use serde_json::json;
 
 pub async fn submit(
     state: web::Data<crate::types::AppState>,
     submit_request: web::Json<NewSubmission>,
 ) -> Result<HttpResponse> {
+    let mut conn = state
+        .db_pool
+        .get()
+        .map_err(|e| ErrorInternalServerError(e.to_string()))?;
     let sub_id = web::block(move || {
-        let mut conn = state.db_pool.get().map_err(|e| format!("Database error: {}", e))?;
         insert_submit(&mut conn, submit_request.into_inner())
             .map_err(|e| format!("Submission error: {}", e))
     })

@@ -3,6 +3,7 @@ use diesel::{prelude::*, r2d2};
 
 pub mod problems;
 pub mod submit;
+pub mod user;
 use std::env;
 
 pub type DbPool = r2d2::Pool<r2d2::ConnectionManager<PgConnection>>;
