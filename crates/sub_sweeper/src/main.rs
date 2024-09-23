@@ -1,8 +1,10 @@
 use data_dust::enums::sub::SubmissionVerdict;
 use data_dust::fns::check_db_connection;
 use data_dust::models::Submissions;
-use data_dust::types::queue::{QueueMessage, SubmissionPayload};
+use data_dust::types::queue::QueueMessage;
 use data_dust::{fns::initialize_db_pool, producer::KafkaProducer};
+use diesel::prelude::*;
+use diesel::sql_query;
 use dotenvy::dotenv;
 use std::env;
 use std::sync::Arc;
@@ -10,12 +12,11 @@ use std::time::Duration;
 use tokio::sync::broadcast;
 use tokio::{self};
 
-async fn process_pending_submissions(
-    db_pool: Arc<data_dust::fns::DbPool>,
-    producer: Arc<KafkaProducer>,
+async fn process_submissions(
+    conn: &mut PgConnection,
+    producer: &KafkaProducer,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let mut conn = db_pool.get()?;
-    let submissions = data_dust::fns::submit::get_last_10_pending_submissions(&mut conn)?;
+    let submissions = data_dust::fns::submit::get_last_10_pending_submissions(conn)?;
 
     if submissions.is_empty() {
         return Ok(());
@@ -27,7 +28,7 @@ async fn process_pending_submissions(
     > = std::collections::HashMap::new();
 
     for submission in &submissions {
-        println!("Put {:?}", submission);
+        println!("Put {}", submission.id);
 
         let queue_message = QueueMessage {
             message_type: "submission".to_string(),
@@ -60,12 +61,33 @@ async fn process_pending_submissions(
             .iter()
             .map(|s| (s.id, SubmissionVerdict::InQueue))
             .collect();
-        data_dust::fns::submit::update_multiple_submission_verdicts(&mut conn, verdict_updates)?;
+        data_dust::fns::submit::update_multiple_submission_verdicts(conn, verdict_updates)?;
     } else {
         println!("Error: Some messages failed to produce. Submissions were not updated.");
     }
 
     Ok(())
+}
+
+async fn process_pending_submissions(
+    worker_id: usize,
+    db_pool: Arc<data_dust::fns::DbPool>,
+    producer: Arc<KafkaProducer>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let mut conn = db_pool.get()?;
+
+    let lock_id = worker_id as i32;
+    sql_query("SELECT pg_advisory_lock($1)")
+        .bind::<diesel::sql_types::Integer, _>(lock_id)
+        .execute(&mut conn)?;
+
+    let result = process_submissions(&mut conn, &producer).await;
+
+    sql_query("SELECT pg_advisory_unlock($1)")
+        .bind::<diesel::sql_types::Integer, _>(lock_id)
+        .execute(&mut conn)?;
+
+    result
 }
 
 async fn worker(
@@ -82,10 +104,16 @@ async fn worker(
                 println!("Worker {} shutting down", id);
                 break;
             }
-            _ = process_pending_submissions(Arc::clone(&db_pool), Arc::clone(&producer)) => {
+            result = process_pending_submissions(id, Arc::clone(&db_pool), Arc::clone(&producer)) => {
+                match result {
+                    Ok(_) => {
+
+                    },
+                    Err(e) => eprintln!("Worker {} encountered an error: {}", id, e),
+                }
             }
         }
-        tokio::time::sleep(Duration::from_secs(1)).await;
+        tokio::time::sleep(Duration::from_millis(1)).await;
     }
 }
 
