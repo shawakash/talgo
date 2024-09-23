@@ -1,4 +1,6 @@
 use data_dust::enums::sub::SubmissionVerdict;
+use data_dust::fns::check_db_connection;
+use data_dust::models::Submissions;
 use data_dust::types::queue::{QueueMessage, SubmissionPayload};
 use data_dust::{fns::initialize_db_pool, producer::KafkaProducer};
 use dotenvy::dotenv;
@@ -21,21 +23,15 @@ async fn process_pending_submissions(
 
     let mut messages_by_language: std::collections::HashMap<
         String,
-        Vec<(String, QueueMessage<SubmissionPayload>)>,
+        Vec<(String, QueueMessage<Submissions>)>,
     > = std::collections::HashMap::new();
 
     for submission in &submissions {
-        let payload = SubmissionPayload {
-            submission_id: submission.id,
-            user_id: submission.user_id,
-            problem_id: submission.problem_id,
-            language: submission.language.clone(),
-            contest_id: submission.contest_id,
-        };
+        println!("Put {:?}", submission);
 
         let queue_message = QueueMessage {
             message_type: "submission".to_string(),
-            payload,
+            payload: submission.clone(),
         };
 
         messages_by_language
@@ -64,7 +60,6 @@ async fn process_pending_submissions(
             .iter()
             .map(|s| (s.id, SubmissionVerdict::InQueue))
             .collect();
-
         data_dust::fns::submit::update_multiple_submission_verdicts(&mut conn, verdict_updates)?;
     } else {
         println!("Error: Some messages failed to produce. Submissions were not updated.");
@@ -88,7 +83,6 @@ async fn worker(
                 break;
             }
             _ = process_pending_submissions(Arc::clone(&db_pool), Arc::clone(&producer)) => {
-                println!("Worker {} processed pending submissions", id);
             }
         }
         tokio::time::sleep(Duration::from_secs(1)).await;
@@ -100,10 +94,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
 
     let db_pool = Arc::new(initialize_db_pool());
-    println!("den");
+    if !check_db_connection(&db_pool).await {
+        eprintln!("Failed to connect to the database. Exiting.");
+        return Ok(());
+    }
+    println!("Database connection successful.");
 
     let kafka_brokers = env::var("KAFKA_BROKER").expect("KAFKA_BROKER must be set!");
     let producer = Arc::new(KafkaProducer::new(&kafka_brokers)?);
+
+    if !producer.check_connection() {
+        eprintln!("Failed to connect to Kafka. Exiting.");
+        return Ok(());
+    }
+    println!("Kafka connection successful.");
 
     let num_workers = env::var("NUM_SWEEPER_BROKERS")
         .unwrap_or_else(|_| "4".to_string())
