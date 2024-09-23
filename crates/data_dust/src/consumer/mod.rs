@@ -1,5 +1,4 @@
 use futures::stream::StreamExt;
-use rdkafka::error::KafkaError;
 use rdkafka::{
     consumer::{Consumer, StreamConsumer},
     message::Message,

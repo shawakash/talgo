@@ -4,13 +4,13 @@ use serde::{Deserialize, Serialize};
 pub struct SubMsg {
     #[serde(rename = "type")]
     pub message_type: String,
-    pub channel: String,
+    pub channels: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Msg {
     #[serde(rename = "type")]
     pub message_type: String,
-    pub channel: String,
+    pub channels: Vec<String>,
     pub data: Option<String>,
 }

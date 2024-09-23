@@ -1,5 +1,5 @@
 use diesel::pg::PgConnection;
-use diesel::{prelude::*, r2d2};
+use diesel::{prelude::*, r2d2, sql_query};
 
 pub mod problems;
 pub mod submit;
@@ -22,4 +22,20 @@ pub fn initialize_db_pool() -> DbPool {
     r2d2::Pool::builder()
         .build(manager)
         .expect("Failed to create pool")
+}
+
+pub async fn check_db_connection(pool: &DbPool) -> bool {
+    match pool.get() {
+        Ok(mut conn) => match sql_query("SELECT 1").execute(&mut conn) {
+            Ok(_) => true,
+            Err(e) => {
+                eprintln!("Database connection test failed: {}", e);
+                false
+            }
+        },
+        Err(e) => {
+            eprintln!("Failed to get database connection: {}", e);
+            false
+        }
+    }
 }

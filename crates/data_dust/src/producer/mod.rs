@@ -1,5 +1,5 @@
 use futures::future::{self, FutureExt};
-use rdkafka::producer::{FutureProducer, FutureRecord};
+use rdkafka::producer::{FutureProducer, FutureRecord, Producer};
 use rdkafka::ClientConfig;
 use serde::Serialize;
 use std::sync::Arc;
@@ -7,7 +7,6 @@ use std::time::Duration;
 
 pub struct KafkaProducer {
     producer: Arc<FutureProducer>,
-    topic: String,
 }
 
 #[derive(Debug)]
@@ -29,7 +28,7 @@ impl From<serde_json::Error> for ProducerError {
 }
 
 impl KafkaProducer {
-    pub fn new(brokers: &str, topic: &str) -> Result<Self, rdkafka::error::KafkaError> {
+    pub fn new(brokers: &str) -> Result<Self, rdkafka::error::KafkaError> {
         let producer = ClientConfig::new()
             .set("bootstrap.servers", brokers)
             .set("message.timeout.ms", "5000")
@@ -39,12 +38,12 @@ impl KafkaProducer {
 
         Ok(Self {
             producer: Arc::new(producer),
-            topic: topic.to_string(),
         })
     }
 
     pub async fn produce<T: Serialize + Send + 'static>(
         &self,
+        topic: &str,
         key: String,
         value: T,
     ) -> Result<(), ProducerError> {
@@ -52,7 +51,7 @@ impl KafkaProducer {
 
         self.producer
             .send(
-                FutureRecord::to(&self.topic).payload(&payload).key(&key),
+                FutureRecord::to(topic).payload(&payload).key(&key),
                 Duration::from_secs(0),
             )
             .await
@@ -64,11 +63,12 @@ impl KafkaProducer {
 
     pub async fn produce_batch<T: Serialize + Send + 'static>(
         &self,
+        topic: &str,
         messages: Vec<(String, T)>,
     ) -> Vec<Result<(), ProducerError>> {
         let futures = messages.into_iter().map(|(key, value)| {
             let producer = Arc::clone(&self.producer);
-            let topic = self.topic.clone();
+            let topic = topic.to_string();
             async move {
                 let payload = serde_json::to_string(&value)?;
                 producer
@@ -89,15 +89,30 @@ impl KafkaProducer {
 
     pub async fn produce_multiple<T: Serialize + Send + 'static>(
         &self,
+        topic: &str,
         messages: Vec<(String, T)>,
     ) -> Vec<Result<(), ProducerError>> {
         let mut results = Vec::with_capacity(messages.len());
 
         for (key, value) in messages {
-            let result = self.produce(key, value).await;
+            let result = self.produce(topic, key, value).await;
             results.push(result);
         }
 
         results
+    }
+
+    pub fn check_connection(&self) -> bool {
+        match self
+            .producer
+            .client()
+            .fetch_metadata(None, Duration::from_secs(5))
+        {
+            Ok(_) => true,
+            Err(e) => {
+                eprintln!("Failed to connect to Kafka: {}", e);
+                false
+            }
+        }
     }
 }
