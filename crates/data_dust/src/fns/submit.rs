@@ -21,7 +21,7 @@ pub fn insert_submit(
         .map_err(|e| e.into())
 }
 
-pub fn get_submit(con: &mut PgConnection, id: i64) -> Result<Submissions, DbError> {
+pub fn get_submit(con: &mut PgConnection, _id: i64) -> Result<Submissions, DbError> {
     use crate::schema::submissions::dsl::*;
 
     submissions
@@ -31,15 +31,16 @@ pub fn get_submit(con: &mut PgConnection, id: i64) -> Result<Submissions, DbErro
         .map_err(|e| e.into())
 }
 
-pub fn get_last_10_pending_submissions(
+pub fn get_last_n_pending_submissions(
     con: &mut PgConnection,
+    n: i64,
 ) -> Result<Vec<Submissions>, DbError> {
     use crate::schema::submissions::dsl::*;
 
     submissions
         .filter(verdict.eq(Some(SubmissionVerdict::Pending)))
         .order(submitted_at.asc())
-        .limit(10)
+        .limit(n.into())
         .select(Submissions::as_select())
         .load(con)
         .map_err(|e| e.into())
