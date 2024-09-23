@@ -1,24 +1,24 @@
-name: Deploy core services
+name: Deploy sub_sweeper services
 
 on:
   push:
     branches:
       - main
     paths:
-      - "crates/core/**"
+      - "crates/sub_sweeper/**"
       - "crates/data_dust/**"
   pull_request:
     branches:
       - main
     paths:
-      - "crates/core/**"
+      - "crates/sub_sweeper/**"
       - "crates/data_dust/**"
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - run: "mv docker/core/Dockerfile ."
+      - run: "mv docker/sub_sweeper/Dockerfile ."
 
       - name: docker login
         env:
@@ -27,7 +27,7 @@ jobs:
         run: |
           docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
       - name: Build the Docker image
-        run: docker build . --tag shawakash/talgo_core:${{ github.sha }}
+        run: docker build . --tag shawakash/talgo_sub_sweeper:${{ github.sha }}
 
       - name: Docker Push
-        run: docker push shawakash/talgo_core:${{ github.sha }}
+        run: docker push shawakash/talgo_sub_sweeper:${{ github.sha }}
