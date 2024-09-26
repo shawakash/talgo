@@ -1,6 +1,6 @@
 # TAlgo: An Open Version of Codeforces in Rust
 
-![TAlgo User Design](/design/user_design.png)
+![TAlgo User Design](statics/user_design.png)
 
 TAlgo is a competitive programming platform inspired by Codeforces, implemented as a Rust workspace. This project aims to provide a robust, efficient, and user-friendly environment for coding competitions and practice.
 
