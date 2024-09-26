@@ -65,19 +65,19 @@ This workspace contains the following crates:
     cd crates/data_dust
     diesel migration run
     cd ../..
-  ```
+    ```
 
-7. Start the backend server:
-   ```
-    cargo run --bin core
-   ```
-   Core server will be running at `http://localhost:8080`
+7. Start the server:
+    ```
+      cargo run --bin core
+      cargo run --bin oxide_wave
+    ```
 
 
 ## Usage
 
 - Access the core backend api server at `http://localhost:8080`
-- Access the web socket server at `http://localhost:8080`
+- Access the web socket server at `http://localhost:8081`
 
 ## Development
 
