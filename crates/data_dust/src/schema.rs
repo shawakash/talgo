@@ -28,6 +28,24 @@ diesel::table! {
 }
 
 diesel::table! {
+    languages (id) {
+        id -> Int4,
+        #[max_length = 255]
+        name -> Varchar,
+        #[max_length = 100]
+        version -> Varchar,
+        #[max_length = 255]
+        compiler -> Varchar,
+        bit_size -> Nullable<Int4>,
+        #[max_length = 255]
+        additional_info -> Nullable<Varchar>,
+        is_active -> Bool,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     problems (id) {
         id -> Int4,
         #[max_length = 255]
@@ -70,6 +88,7 @@ diesel::table! {
         test_cases_passed -> Nullable<Int4>,
         total_test_cases -> Nullable<Int4>,
         contest_id -> Int4,
+        contest_sub -> Bool,
     }
 }
 
@@ -131,6 +150,7 @@ diesel::joinable!(submissions -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     contests,
+    languages,
     problems,
     submissions,
     user_problems,

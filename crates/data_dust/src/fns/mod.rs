@@ -1,6 +1,7 @@
 use diesel::pg::PgConnection;
 use diesel::{prelude::*, r2d2, sql_query};
 
+pub mod language;
 pub mod problems;
 pub mod submit;
 pub mod user;

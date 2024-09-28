@@ -81,6 +81,7 @@ pub struct Submissions {
     pub test_cases_passed: Option<i32>,
     pub total_test_cases: Option<i32>,
     pub contest_id: i32,
+    pub contest_sub: bool,
 }
 
 #[derive(Queryable, Insertable, Serialize, QueryId, Debug, Selectable, Deserialize, Clone)]
@@ -105,4 +106,18 @@ pub struct Contest {
     pub scoring_system: String,
     pub penalty_seconds: i32,
     pub frozen_time_seconds: Option<i32>,
+}
+
+#[derive(Queryable, Insertable, Serialize, QueryId, Debug, Selectable, Deserialize, Clone)]
+#[diesel(table_name = crate::schema::languages)]
+pub struct Language {
+    pub id: i32,
+    pub name: String,
+    pub version: String,
+    pub compiler: String,
+    pub bit_size: Option<i32>,
+    pub additional_info: Option<String>,
+    pub is_active: bool,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
 }
